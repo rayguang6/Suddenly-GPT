@@ -4,109 +4,112 @@ import user from './assets/user.svg'
 const form = document.querySelector('form')
 const chatContainer = document.querySelector('#chat_container')
 
-let loadInterval;
+let loadInterval
 
-// loading interval
-// add 1 dot everytime, reset when reached 3
-function loader(element){
+function loader(element) {
     element.textContent = ''
 
     loadInterval = setInterval(() => {
-            element.textContent += '.'
+        // Update the text content of the loading indicator
+        element.textContent += '.';
 
-            if (element.textContent === '....'){
-                element.textContent = ''
-            }
-        },300
-    )
+        // If the loading indicator has reached three dots, reset it
+        if (element.textContent === '....') {
+            element.textContent = '';
+        }
+    }, 300);
 }
 
-function typeText(element, text){
-    let index = 0 
+function typeText(element, text) {
+    let index = 0
 
-    let interval = setInterval(()=>{
-        if(index < text.length){
+    let interval = setInterval(() => {
+        if (index < text.length) {
             element.innerHTML += text.charAt(index)
             index++
-        }else{
+        } else {
             clearInterval(interval)
         }
     }, 20)
 }
 
+// generate unique ID for each message div of bot
+// necessary for typing text effect for that specific reply
+// without unique ID, typing text will work on every element
 function generateUniqueId() {
     const timestamp = Date.now();
-    const randomNumber=  Math.random();
-    const hexadecimalString = randomNumber.toString(16)
+    const randomNumber = Math.random();
+    const hexadecimalString = randomNumber.toString(16);
 
-    return `id-${timestamp}-${hexadecimalString}`
+    return `id-${timestamp}-${hexadecimalString}`;
 }
 
-function chatStripe (isAi, value, uniqueId) {
+function chatStripe(isAi, value, uniqueId) {
     return (
         `
-            <div class="wrapper ${isAi && 'ai'}">
-                <div class="chat">
-                    <div class="profile">
-                        <img 
-                            src="${isAi ? bot : user}"
-                            alt="${isAi ? 'bot' : 'user'}"
-                         />
-                    </div>
-                    <div class="message" id=${uniqueId}> ${value} </div>
+        <div class="wrapper ${isAi && 'ai'}">
+            <div class="chat">
+                <div class="profile">
+                    <img 
+                      src=${isAi ? bot : user} 
+                      alt="${isAi ? 'bot' : 'user'}" 
+                    />
                 </div>
+                <div class="message" id=${uniqueId}>${value}</div>
             </div>
-        `
+        </div>
+    `
     )
 }
 
 const handleSubmit = async (e) => {
-    e.preventDefault();
+    e.preventDefault()
 
     const data = new FormData(form)
 
-    // user chat stripe
+    // user's chatstripe
     chatContainer.innerHTML += chatStripe(false, data.get('prompt'))
 
+    // to clear the textarea input 
     form.reset()
 
-    //bot chatstripe
+    // bot's chatstripe
     const uniqueId = generateUniqueId()
     chatContainer.innerHTML += chatStripe(true, " ", uniqueId)
 
-    chatContainer.scrollTop = chatContainer.scrollHeight
+    // to focus scroll to the bottom 
+    chatContainer.scrollTop = chatContainer.scrollHeight;
 
+    // specific message div 
     const messageDiv = document.getElementById(uniqueId)
 
+    // messageDiv.innerHTML = "..."
     loader(messageDiv)
 
-    // const response = await fetch('http://localhost:5000', {
-    const response = await fetch('https://suddenly-gpt.onrender.com/', {
-        method: "POST",
+    const response = await fetch('http://localhost:5000', {
+        method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
         },
         body: JSON.stringify({
             prompt: data.get('prompt')
         })
-
     })
 
     clearInterval(loadInterval)
-    messageDiv.innerHTML = ''
+    messageDiv.innerHTML = " "
 
-    if(response.ok) {
-        const data = await response.json()
-        const parsedData = data.bot.trim()
-        
+    if (response.ok) {
+        const data = await response.json();
+        const parsedData = data.bot.trim() // trims any trailing spaces/'\n' 
+
         typeText(messageDiv, parsedData)
     } else {
         const err = await response.text()
 
-        messageDiv.innerHTML = "Something Went Wrong..."
+        messageDiv.innerHTML = "Something went wrong"
         alert(err)
     }
-
 }
 
 form.addEventListener('submit', handleSubmit)
@@ -115,4 +118,3 @@ form.addEventListener('keyup', (e) => {
         handleSubmit(e)
     }
 })
-
